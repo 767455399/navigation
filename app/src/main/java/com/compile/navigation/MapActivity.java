@@ -43,8 +43,8 @@ public class MapActivity extends AppCompatActivity implements AMapNaviViewListen
     private Context mContext;
     private RouteSearch mRouteSearch;
     private BusRouteResult mBusRouteResult;
-    private LatLonPoint mStartPoint = new LatLonPoint(39.942295, 116.335891);//起点，116.335891,39.942295
-    private LatLonPoint mEndPoint = new LatLonPoint(39.995576, 116.481288);//终点，116.481288,39.995576
+    private LatLonPoint mStartPoint = new LatLonPoint(139.942295, 116.335891);//起点，116.335891,39.942295
+    private LatLonPoint mEndPoint = new LatLonPoint(139.995576, 116.481288);//终点，116.481288,39.995576
     private String mCurrentCityName = "北京";
     private final int ROUTE_TYPE_BUS = 1;
     private LinearLayout mBusResultLayout;
@@ -66,7 +66,7 @@ public class MapActivity extends AppCompatActivity implements AMapNaviViewListen
         mapView.onCreate(savedInstanceState);// 此方法必须重写
         initView();
         setfromandtoMarker();
-        mapView.setVisibility(View.GONE);
+        mapView.setVisibility(View.VISIBLE);
         mBusResultLayout.setVisibility(View.VISIBLE);
         searchRouteResult(ROUTE_TYPE_BUS, RouteSearch.BusDefault);
     }
