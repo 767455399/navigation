@@ -1,6 +1,7 @@
 package com.compile.navigation;
 
 import android.Manifest;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -11,16 +12,22 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import com.amap.api.location.AMapLocation;
+import com.amap.api.location.AMapLocationClient;
+import com.amap.api.location.AMapLocationClientOption;
+import com.amap.api.location.AMapLocationListener;
 import com.amap.api.maps.AMap;
+import com.amap.api.maps.LocationSource;
 import com.amap.api.maps.MapView;
+import com.amap.api.maps.UiSettings;
 import com.amap.api.maps.model.BitmapDescriptorFactory;
 import com.amap.api.maps.model.LatLng;
 import com.amap.api.maps.model.Marker;
@@ -35,9 +42,10 @@ import com.amap.api.services.route.RideRouteResult;
 import com.amap.api.services.route.RouteSearch;
 import com.amap.api.services.route.WalkRouteResult;
 
-public class MapActivity extends AppCompatActivity implements AMapNaviViewListener,AMap.OnMapClickListener, AMap.OnMarkerClickListener, AMap.OnInfoWindowClickListener, AMap.InfoWindowAdapter, RouteSearch.OnRouteSearchListener {
-    public static final int ACCESS_FINE_LOCATION_PERMISSION=0;
+public class MapActivity extends AppCompatActivity implements AMapNaviViewListener,AMap.OnMapClickListener,LocationSource, AMapLocationListener, AMap.OnMarkerClickListener, AMap.OnInfoWindowClickListener, AMap.InfoWindowAdapter, RouteSearch.OnRouteSearchListener {
+    public static final int ACCESS_COARSE_LOCATION=0;
     private static final String PACKAGE_URL_SCHEME = "package:";
+    private static final String TAG = "MapActivity";
     private AMap aMap;
     private MapView mapView;
     private Context mContext;
@@ -52,9 +60,10 @@ public class MapActivity extends AppCompatActivity implements AMapNaviViewListen
     private ListView mBusResultList;
     private ProgressDialog progDialog = null;// 搜索时进度条
     private MyLocationStyle myLocationStyle;
-//    LocationSource.OnLocationChangedListener mListener;
-//    AMapLocationClient mlocationClient;
-//    AMapLocationClientOption mLocationOption;
+    OnLocationChangedListener mListener;
+    AMapLocationClient mlocationClient;
+    AMapLocationClientOption mLocationOption;
+    private UiSettings mUiSettings;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,6 +84,9 @@ public class MapActivity extends AppCompatActivity implements AMapNaviViewListen
         if (aMap == null) {
             aMap = mapView.getMap();
         }
+        mUiSettings = aMap.getUiSettings();
+        mUiSettings.setAllGesturesEnabled (true);
+//        mUiSettings.setZoomGesturesEnabled(true);
         registerListener();
         mRouteSearch = new RouteSearch(this);
         mRouteSearch.setRouteSearchListener(this);
@@ -82,6 +94,21 @@ public class MapActivity extends AppCompatActivity implements AMapNaviViewListen
         mBusResultList = (ListView) findViewById(R.id.bus_result_list);
         mHeadLayout = (RelativeLayout) findViewById(R.id.routemap_header);
         mHeadLayout.setVisibility(View.GONE);
+        //显示实时交通情况
+        aMap.setTrafficEnabled(true);
+        //地图模式
+        aMap.setMapType(AMap.MAP_TYPE_NORMAL);
+
+        aMap.setLocationSource(this);
+        myLocationStyle = new MyLocationStyle();
+        //初始化定位蓝点样式类
+        myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE);
+        //连续定位、且将视角移动到地图中心点，定位点依照设备方向旋转，并且会跟随设备移动。（1秒1次定位）如果不设置myLocationType，默认也会执行此种模式。
+        myLocationStyle.interval(2000); //设置连续定位模式下的定位间隔，只在连续定位模式下生效，单次定位模式下不会生效。单位为毫秒。
+        myLocationStyle.showMyLocation(true);
+        aMap.setMyLocationStyle(myLocationStyle);//设置定位蓝点的Style
+        aMap.getUiSettings().setMyLocationButtonEnabled(true);//设置默认定位按钮是否显示，非必需设置。
+        aMap.setMyLocationEnabled(true);// 设置为true表示启动显示定位蓝点，false表示隐藏定位蓝点并不进行定位，默认是false。
     }
 
     /**
@@ -127,12 +154,12 @@ public class MapActivity extends AppCompatActivity implements AMapNaviViewListen
 
 
     private void requestPermissions() {
-        if(ContextCompat.checkSelfPermission(MapActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)!= PackageManager.PERMISSION_GRANTED){
+        if(ContextCompat.checkSelfPermission(MapActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION)!= PackageManager.PERMISSION_GRANTED){
             /**
              * 如果权限未被禁止弹框则继续申请，并告知用途以及不允许权限的弊端。
              */
-            if(!ActivityCompat.shouldShowRequestPermissionRationale(MapActivity.this,Manifest.permission.ACCESS_FINE_LOCATION)){
-                ActivityCompat.requestPermissions(MapActivity.this,new String[]{Manifest.permission.ACCESS_FINE_LOCATION},ACCESS_FINE_LOCATION_PERMISSION);
+            if(!ActivityCompat.shouldShowRequestPermissionRationale(MapActivity.this,Manifest.permission.ACCESS_COARSE_LOCATION)){
+                ActivityCompat.requestPermissions(MapActivity.this,new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},ACCESS_COARSE_LOCATION);
             }else{
                 /**
                  * 完全禁止无法再弹权限申请框，这是提示用户去设置里开启权限。
@@ -156,6 +183,7 @@ public class MapActivity extends AppCompatActivity implements AMapNaviViewListen
     }
 
 
+
     /**
      * 方法必须重写
      */
@@ -168,7 +196,9 @@ public class MapActivity extends AppCompatActivity implements AMapNaviViewListen
     @Override
     protected void onResume() {
         super.onResume();
+        requestPermissions();
         mapView.onResume();
+        mlocationClient.startLocation();
     }
 
     @Override
@@ -181,6 +211,9 @@ public class MapActivity extends AppCompatActivity implements AMapNaviViewListen
     protected void onDestroy() {
         super.onDestroy();
         mapView.onDestroy();
+        if(null!=mlocationClient){
+            mlocationClient.onDestroy();
+        }
     }
 
     @Override
@@ -312,5 +345,58 @@ public class MapActivity extends AppCompatActivity implements AMapNaviViewListen
     @Override
     public void onRideRouteSearched(RideRouteResult rideRouteResult, int i) {
 
+    }
+
+    /**
+     * 定位成功回调函数
+     * @param aMapLocation
+     */
+    @Override
+    public void onLocationChanged(AMapLocation aMapLocation) {
+        if(mListener!=null&&aMapLocation!=null){
+            if(aMapLocation!=null&&aMapLocation.getErrorCode()==0) {
+                //显示系统小蓝点
+                mListener.onLocationChanged(aMapLocation);
+            }else{
+                Log.d(TAG, "onLocationChanged: 定位失败"+aMapLocation.getErrorCode()+":"+aMapLocation.getErrorInfo());
+            }
+        }
+
+    }
+
+    @Override
+    public void activate(OnLocationChangedListener listener) {
+        mListener = listener;
+        if(null==mlocationClient){
+            //初始化定位
+            mlocationClient=new AMapLocationClient(this);
+            //初始化定位参数
+            mLocationOption=new AMapLocationClientOption();
+            //设置定位回调监听
+            mlocationClient.setLocationListener(this);
+            //设置为高精度定位模式
+            mLocationOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Battery_Saving);
+            //设置定位参数
+            mlocationClient.setLocationOption(mLocationOption);
+            // 此方法为每隔固定时间会发起一次定位请求，为了减少电量消耗或网络流量消耗，
+            // 注意设置合适的定位时间的间隔（最小间隔支持为2000ms），并且在合适时间调用stopLocation()方法来取消定位请求
+            // 在定位结束后，在合适的生命周期调用onDestroy()方法
+            // 在单次定位情况下，定位无论成功与否，都无需调用stopLocation()方法移除请求，定位sdk内部会移除
+            mlocationClient.startLocation();
+        }
+
+    }
+
+    /**
+     * 停止定位
+     */
+    @Override
+    public void deactivate() {
+        mListener=null;
+        if(mlocationClient!=null){
+            mlocationClient.startLocation();
+            mlocationClient.onDestroy();
+        }
+        mlocationClient=null;
     }
 }

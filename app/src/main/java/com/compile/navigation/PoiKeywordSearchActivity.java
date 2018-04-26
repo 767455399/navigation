@@ -197,6 +197,8 @@ public class PoiKeywordSearchActivity extends FragmentActivity implements
 		// 设置终点位置
 		naviPara.setTargetPoint(marker.getPosition());
 		// 设置导航策略，这里是避免拥堵
+		double aaa=marker.getPosition().latitude;
+		double bbb=marker.getPosition().longitude;
 		naviPara.setNaviStyle(NaviPara.DRIVING_AVOID_CONGESTION);
 
 		// 调起高德地图导航
@@ -330,6 +332,7 @@ public class PoiKeywordSearchActivity extends FragmentActivity implements
 		// TODO Auto-generated method stub
 		String aaa= String.valueOf(item.getLatLonPoint().getLatitude());
 		String bbb=String.valueOf(item.getLatLonPoint().getLongitude());
+		Toast.makeText(this, aaa+bbb, Toast.LENGTH_SHORT).show();
 
 	}
 

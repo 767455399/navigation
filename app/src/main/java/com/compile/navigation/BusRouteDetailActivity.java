@@ -21,7 +21,7 @@ import com.amap.api.services.route.BusPath;
 import com.amap.api.services.route.BusRouteResult;
 
 public class BusRouteDetailActivity extends Activity implements OnMapLoadedListener,
-        OnMapClickListener, InfoWindowAdapter, OnInfoWindowClickListener, OnMarkerClickListener {
+		OnMapClickListener, InfoWindowAdapter, OnInfoWindowClickListener, OnMarkerClickListener {
 	private AMap aMap;
 	private MapView mapView;
 	private BusPath mBuspath;
@@ -51,17 +51,17 @@ public class BusRouteDetailActivity extends Activity implements OnMapLoadedListe
 
 	private void init() {
 		if (aMap == null) {
-			aMap = mapView.getMap();	
+			aMap = mapView.getMap();
 		}
 		registerListener();
-		
+
 		mTitle = (TextView) findViewById(R.id.title_center);
 		mTitle.setText("公交路线详情");
 		mTitleBusRoute = (TextView) findViewById(R.id.firstline);
 		mDesBusRoute = (TextView) findViewById(R.id.secondline);
-		String dur = AMapUtil.getFriendlyTime((int) mBuspath.getDuration());
-		String dis = AMapUtil.getFriendlyLength((int) mBuspath.getDistance());
-		mTitleBusRoute.setText(dur + "(" + dis + ")");
+//		String dur = AMapUtil.getFriendlyTime((int) mBuspath.getDuration());
+//		String dis = AMapUtil.getFriendlyLength((int) mBuspath.getDistance());
+//		mTitleBusRoute.setText(dur + "(" + dis + ")");
 		int taxiCost = (int) mBusRouteResult.getTaxiCost();
 		mDesBusRoute.setText("打车约"+taxiCost+"元");
 		mDesBusRoute.setVisibility(View.VISIBLE);
@@ -84,13 +84,13 @@ public class BusRouteDetailActivity extends Activity implements OnMapLoadedListe
 		mBusSegmentListAdapter = new BusSegmentListAdapter(
 				this.getApplicationContext(), mBuspath.getSteps());
 		mBusSegmentList.setAdapter(mBusSegmentListAdapter);
-		
+
 	}
-	
+
 	public void onBackClick(View view) {
 		this.finish();
 	}
-	
+
 	public void onMapClick(View view) {
 		mBuspathview.setVisibility(View.GONE);
 		mBusMap.setVisibility(View.GONE);
@@ -114,7 +114,7 @@ public class BusRouteDetailActivity extends Activity implements OnMapLoadedListe
 	@Override
 	public void onMapClick(LatLng arg0) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -132,7 +132,7 @@ public class BusRouteDetailActivity extends Activity implements OnMapLoadedListe
 	@Override
 	public void onInfoWindowClick(Marker arg0) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -140,6 +140,6 @@ public class BusRouteDetailActivity extends Activity implements OnMapLoadedListe
 		// TODO Auto-generated method stub
 		return false;
 	}
-	
+
 
 }

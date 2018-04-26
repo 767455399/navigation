@@ -22,23 +22,23 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-
         <meta-data
             android:name="com.amap.api.v2.apikey"
             android:value="2230e0306060e7532c7a15a9e50ba27f" />
 
         <service android:name="com.amap.api.location.APSService" />
 
-        <activity android:name=".PoiKeywordSearchActivity">
+        <activity android:name=".BuslineActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
+        <activity android:name=".PoiKeywordSearchActivity" />
+        <activity android:name=".MapActivity" />
+        <activity android:name=".LocationActivity"></activity>
         <activity android:name=".BusRouteDetailActivity"/>
-        <activity android:name=".MapActivity"/>
     </application>
 
 </manifest>
