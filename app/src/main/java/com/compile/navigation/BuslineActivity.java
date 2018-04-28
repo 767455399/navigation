@@ -1,10 +1,12 @@
 package com.compile.navigation;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.AdapterView;
@@ -17,11 +19,17 @@ import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import com.amap.api.location.AMapLocation;
+import com.amap.api.location.AMapLocationClient;
+import com.amap.api.location.AMapLocationClientOption;
+import com.amap.api.location.AMapLocationListener;
 import com.amap.api.maps.AMap;
 import com.amap.api.maps.AMap.InfoWindowAdapter;
 import com.amap.api.maps.AMap.OnMarkerClickListener;
 import com.amap.api.maps.MapView;
+import com.amap.api.maps.model.LatLng;
 import com.amap.api.maps.model.Marker;
+import com.amap.api.maps.model.MyLocationStyle;
 import com.amap.api.services.busline.BusLineItem;
 import com.amap.api.services.busline.BusLineQuery;
 import com.amap.api.services.busline.BusLineQuery.SearchType;
@@ -37,7 +45,7 @@ import java.util.List;
  */
 public class BuslineActivity extends Activity implements OnMarkerClickListener,
         InfoWindowAdapter, OnItemSelectedListener, OnBusLineSearchListener,
-        OnClickListener {
+        OnClickListener, AMapLocationListener {
 	private static final String TAG = "BuslineActivity";
 	private AMap aMap;
 	private MapView mapView;
@@ -52,6 +60,9 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
 	private BusLineQuery busLineQuery;// 公交线路查询的查询类
 
 	private BusLineSearch busLineSearch;// 公交线路列表查询
+	private AMapLocationClient aMapLocationClient;
+	private AMapLocationClientOption aMapLocationClientOption;
+	private MyLocationStyle myLocationStyle;
 
 	@Override
 	protected void onCreate(Bundle bundle) {
@@ -72,11 +83,28 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
 	/**
 	 * 初始化AMap对象
 	 */
+	@SuppressLint("InlinedApi")
 	private void init() {
 		if (aMap == null) {
 			aMap = mapView.getMap();
 			setUpMap();
 		}
+		aMapLocationClient=new AMapLocationClient(this);
+		aMapLocationClientOption=new AMapLocationClientOption();
+		aMapLocationClient.setLocationListener(this);
+		aMapLocationClientOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Battery_Saving);
+		aMapLocationClientOption.setInterval(2000);
+		myLocationStyle = new MyLocationStyle();
+		//初始化定位蓝点样式类
+		myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE);
+		//连续定位、且将视角移动到地图中心点，定位点依照设备方向旋转，并且会跟随设备移动。（1秒1次定位）如果不设置myLocationType，默认也会执行此种模式。
+		myLocationStyle.interval(2000); //设置连续定位模式下的定位间隔，只在连续定位模式下生效，单次定位模式下不会生效。单位为毫秒。
+		myLocationStyle.showMyLocation(true);
+		aMap.setMyLocationStyle(myLocationStyle);//设置定位蓝点的Style
+		aMap.getUiSettings().setMyLocationButtonEnabled(true);//设置默认定位按钮是否显示，非必需设置。
+		aMap.setMyLocationEnabled(true);// 设置为true表示启动显示定位蓝点，false表示隐藏定位蓝点并不进行定位，默认是false。
+		aMapLocationClient.setLocationOption(aMapLocationClientOption);
+		aMapLocationClient.startLocation();
 		Button searchByName = (Button) findViewById(R.id.searchbyname);
 		searchByName.setOnClickListener(this);
 		selectCity = (Spinner) findViewById(R.id.cityName);
@@ -104,6 +132,7 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
 	protected void onResume() {
 		super.onResume();
 		mapView.onResume();
+		aMapLocationClient.startLocation();
 	}
 
 	/**
@@ -131,6 +160,9 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
 	protected void onDestroy() {
 		super.onDestroy();
 		mapView.onDestroy();
+		if(null!=aMapLocationClient){
+			aMapLocationClient.onDestroy();
+		}
 	}
 
 	/**
@@ -204,7 +236,7 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
 	 */
 	@Override
 	public boolean onMarkerClick(Marker marker) {
-		return false;// 点击marker时把此marker显示在地图中心点
+		return true;// 点击marker时把此marker显示在地图中心点
 	}
 
 	/**
@@ -243,6 +275,31 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
 			}
 		});
 		busLineDialog.show();
+
+	}
+
+	@Override
+	public void onLocationChanged(AMapLocation aMapLocation) {
+		if(null!=aMapLocation){
+			if(0==aMapLocation.getErrorCode()){
+				aMapLocation.getLocationType();
+				Double currentLatitude=aMapLocation.getLatitude();
+				Double currentLongitude=aMapLocation.getLongitude();
+				aMapLocation.getAccuracy();
+				cityCode=aMapLocation.getCityCode();
+				LatLng startLatLng=new LatLng(currentLatitude,currentLongitude);
+//				LatLng endLatLng=new LatLng();
+//				AMapUtils.calculateLineDistance(startLatLng,);
+				Log.d(TAG, "onLocationChanged: 获取位置成功");
+			}else{
+				//显示错误信息ErrCode是错误码，errInfo是错误信息，详见错误码表。
+				Log.e("AmapError","location Error, ErrCode:"
+						+ aMapLocation.getErrorCode() + ", errInfo:"
+						+ aMapLocation.getErrorInfo());
+				Log.d(TAG, "onLocationChanged: 获取位置失败");
+			}
+		}
+
 
 	}
 
@@ -352,6 +409,7 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
 					if(lineItems != null && lineItems.size() > 0) {
 						BusLineOverlay busLineOverlay = new BusLineOverlay(this,
 								aMap, lineItems.get(0));
+
 						busLineOverlay.removeFromMap();
 						busLineOverlay.addToMap();
 						busLineOverlay.zoomToSpan();
