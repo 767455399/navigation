@@ -6,6 +6,7 @@ import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -39,6 +40,8 @@ import com.amap.api.services.busline.BusLineSearch;
 import com.amap.api.services.busline.BusLineSearch.OnBusLineSearchListener;
 import com.amap.api.services.busline.BusStationItem;
 import com.amap.api.services.core.AMapException;
+import com.compile.voice.TTSUtils;
+import com.iflytek.cloud.SpeechUtility;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,6 +54,10 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
         OnClickListener, AMapLocationListener {
     private static final double EARTH_RADIUS = 6378137.0;
     private static final String TAG = "BuslineActivity";
+    private EditText distanceEditText;
+    private float zuixiaojuli = 10000;
+    private int zuixiao = 0;
+    private double juli;
     private AMap aMap;
     private MapView mapView;
     private ProgressDialog progDialog = null;// 进度框
@@ -69,6 +76,7 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
     private MyLocationStyle myLocationStyle;
     private List<BusLocationModel> busLocationList;
     private List<BusStationItem> mBusStations;
+    private String busStationName = "a";
 
     @Override
     protected void onCreate(Bundle bundle) {
@@ -123,6 +131,7 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
         searchName = (EditText) findViewById(R.id.busName);
         busLocationList = new ArrayList<>();
         mBusStations = new ArrayList<>();
+        distanceEditText = (EditText) findViewById(R.id.distanceEditText);
     }
 
     /**
@@ -167,6 +176,7 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        busStationName = "";
         mapView.onDestroy();
         if (null != aMapLocationClient) {
             aMapLocationClient.onDestroy();
@@ -193,7 +203,7 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
         busLineSearch.searchBusLineAsyn();// 异步查询公交线路名称
         // 公交站点搜索事例
         /*
-		 * BusStationQuery query = new BusStationQuery(search,cityCode);
+         * BusStationQuery query = new BusStationQuery(search,cityCode);
 		 * query.setPageSize(10); query.setPageNumber(currentpage);
 		 * BusStationSearch busStationSearch = new BusStationSearch(this,query);
 		 * busStationSearch.setOnBusStationSearchListener(this);
@@ -290,24 +300,47 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
     public void onLocationChanged(AMapLocation aMapLocation) {
         if (null != aMapLocation) {
             if (0 == aMapLocation.getErrorCode()) {
+                if (!TextUtils.isEmpty(distanceEditText.getText().toString())) {
+                    juli = Double.parseDouble(distanceEditText.getText().toString());
+                } else {
+                    juli = 30;
+                }
                 aMapLocation.getLocationType();
                 double currentLatitude = aMapLocation.getLatitude();
                 double currentLongitude = aMapLocation.getLongitude();
                 aMapLocation.getAccuracy();
                 cityCode = aMapLocation.getCityCode();
                 LatLng startLatLng = new LatLng(currentLatitude, currentLongitude);
-                if (mBusStations != null) {
+                if (mBusStations != null && mBusStations.size() > 0) {
                     isArriveStation(mBusStations);
                     for (int i = 0; i < mBusStations.size(); i++) {
                         LatLng endLatLng = new LatLng(mBusStations.get(i).getLatLonPoint().getLatitude(), mBusStations.get(i).getLatLonPoint().getLongitude());
                         float aa = AMapUtils.calculateLineDistance(startLatLng, endLatLng);
-                        double busStationLatitude=mBusStations.get(i).getLatLonPoint().getLatitude();
-                        double busStationLongitude=mBusStations.get(i).getLatLonPoint().getLongitude();
-                        if(getDistance(currentLongitude,currentLatitude,busStationLongitude,busStationLatitude)<20){
-                            Log.d(TAG, "onLocationChanged: 到了"+mBusStations.get(i).getBusStationName());
-                            Toast.makeText(BuslineActivity.this,mBusStations.get(i).getBusStationName(),Toast.LENGTH_SHORT).show();
+                        if (aa < zuixiaojuli) {
+                            zuixiaojuli = aa;
+                            zuixiao = i;
                         }
+
+                        double busStationLatitude = mBusStations.get(i).getLatLonPoint().getLatitude();
+                        double busStationLongitude = mBusStations.get(i).getLatLonPoint().getLongitude();
+                        double bb = getDistance(currentLongitude, currentLatitude, busStationLongitude, busStationLatitude);
+//                        if (getDistance(currentLongitude, currentLatitude, busStationLongitude, busStationLatitude) < juli) {
+//                            Log.d(TAG, "onLocationChanged: 到了" + mBusStations.get(i).getBusStationName());
+//                            if (mBusStations.get(i).getBusStationName() != busStationName) {
+//                                Toast.makeText(BuslineActivity.this, mBusStations.get(i).getBusStationName(), Toast.LENGTH_SHORT).show();
+//                                busStationName = mBusStations.get(i).getBusStationName();
+//                                if (!TextUtils.isEmpty(busStationName)) {
+//                                    SpeechUtility.createUtility(BuslineActivity.this, "appid=5ad5ee1e");//=号后面写自己应用的APPID
+//                                    TTSUtils.getInstance().speak(busStationName + "站到了");
+//                                }
+//                            }
+//                        }
+
+
                     }
+                    bobao();
+
+
                 }
 
                 Log.d(TAG, "onLocationChanged: 获取位置成功");
@@ -321,6 +354,21 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
         }
 
 
+    }
+
+    private void bobao() {
+        if (zuixiaojuli < juli) {
+            if (!TextUtils.isEmpty(mBusStations.get(zuixiao).getBusStationName()) && busStationName != mBusStations.get(zuixiao).getBusStationName()) {
+                for (int m = 0; m < 2; m++) {
+                    SpeechUtility.createUtility(BuslineActivity.this, "appid=5ad5ee1e");//=号后面写自己应用的APPID
+                    TTSUtils.getInstance().speak(busStationName + "站到了");
+                    Toast.makeText(BuslineActivity.this, mBusStations.get(zuixiao).getBusStationName(), Toast.LENGTH_SHORT).show();
+                    Log.d(TAG, "onLocationChanged: 到了" + mBusStations.get(zuixiao).getBusStationName());
+                }
+                busStationName = mBusStations.get(zuixiao).getBusStationName();
+
+            }
+        }
     }
 
     // 返回单位是米
@@ -345,85 +393,85 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
     private void isArriveStation(List<BusStationItem> mBusStations) {
     }
 
-/**
- * BusLineDialog ListView 选项点击回调
- */
-interface OnListItemlistener {
-    public void onListItemClick(BusLineDialog dialog, BusLineItem item);
-}
-
-/**
- * 所有公交线路显示页面
- */
-class BusLineDialog extends Dialog implements OnClickListener {
-
-    private List<BusLineItem> busLineItems;
-    private BusLineAdapter busLineAdapter;
-    private Button preButton, nextButton;
-    private ListView listView;
-    protected OnListItemlistener onListItemlistener;
-
-    public BusLineDialog(Context context, int theme) {
-        super(context, theme);
+    /**
+     * BusLineDialog ListView 选项点击回调
+     */
+    interface OnListItemlistener {
+        public void onListItemClick(BusLineDialog dialog, BusLineItem item);
     }
 
-    public void onListItemClicklistener(
-            OnListItemlistener onListItemlistener) {
-        this.onListItemlistener = onListItemlistener;
+    /**
+     * 所有公交线路显示页面
+     */
+    class BusLineDialog extends Dialog implements OnClickListener {
 
-    }
+        private List<BusLineItem> busLineItems;
+        private BusLineAdapter busLineAdapter;
+        private Button preButton, nextButton;
+        private ListView listView;
+        protected OnListItemlistener onListItemlistener;
 
-    public BusLineDialog(Context context, List<BusLineItem> busLineItems) {
-        this(context, android.R.style.Theme_NoTitleBar);
-        this.busLineItems = busLineItems;
-        busLineAdapter = new BusLineAdapter(context, busLineItems);
-    }
+        public BusLineDialog(Context context, int theme) {
+            super(context, theme);
+        }
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.busline_dialog);
-        preButton = (Button) findViewById(R.id.preButton);
-        nextButton = (Button) findViewById(R.id.nextButton);
-        listView = (ListView) findViewById(R.id.listview);
-        listView.setAdapter(busLineAdapter);
-        listView.setOnItemClickListener(new OnItemClickListener() {
+        public void onListItemClicklistener(
+                OnListItemlistener onListItemlistener) {
+            this.onListItemlistener = onListItemlistener;
 
-            @Override
-            public void onItemClick(AdapterView<?> arg0, View arg1,
-                                    int arg2, long arg3) {
-                onListItemlistener.onListItemClick(BusLineDialog.this,
-                        busLineItems.get(arg2));
-                dismiss();
+        }
 
+        public BusLineDialog(Context context, List<BusLineItem> busLineItems) {
+            this(context, android.R.style.Theme_NoTitleBar);
+            this.busLineItems = busLineItems;
+            busLineAdapter = new BusLineAdapter(context, busLineItems);
+        }
+
+        @Override
+        protected void onCreate(Bundle savedInstanceState) {
+            super.onCreate(savedInstanceState);
+            setContentView(R.layout.busline_dialog);
+            preButton = (Button) findViewById(R.id.preButton);
+            nextButton = (Button) findViewById(R.id.nextButton);
+            listView = (ListView) findViewById(R.id.listview);
+            listView.setAdapter(busLineAdapter);
+            listView.setOnItemClickListener(new OnItemClickListener() {
+
+                @Override
+                public void onItemClick(AdapterView<?> arg0, View arg1,
+                                        int arg2, long arg3) {
+                    onListItemlistener.onListItemClick(BusLineDialog.this,
+                            busLineItems.get(arg2));
+                    dismiss();
+
+                }
+            });
+            preButton.setOnClickListener(this);
+            nextButton.setOnClickListener(this);
+            if (currentpage <= 0) {
+                preButton.setEnabled(false);
             }
-        });
-        preButton.setOnClickListener(this);
-        nextButton.setOnClickListener(this);
-        if (currentpage <= 0) {
-            preButton.setEnabled(false);
+            if (currentpage >= busLineResult.getPageCount() - 1) {
+                nextButton.setEnabled(false);
+            }
+
         }
-        if (currentpage >= busLineResult.getPageCount() - 1) {
-            nextButton.setEnabled(false);
+
+        @Override
+        public void onClick(View v) {
+            this.dismiss();
+            if (v.equals(preButton)) {
+                currentpage--;
+            } else if (v.equals(nextButton)) {
+                currentpage++;
+            }
+            showProgressDialog();
+            busLineQuery.setPageNumber(currentpage);// 设置公交查询第几页
+            busLineSearch.setOnBusLineSearchListener(BuslineActivity.this);
+            busLineSearch.searchBusLineAsyn();// 异步查询公交线路名称
         }
 
     }
-
-    @Override
-    public void onClick(View v) {
-        this.dismiss();
-        if (v.equals(preButton)) {
-            currentpage--;
-        } else if (v.equals(nextButton)) {
-            currentpage++;
-        }
-        showProgressDialog();
-        busLineQuery.setPageNumber(currentpage);// 设置公交查询第几页
-        busLineSearch.setOnBusLineSearchListener(BuslineActivity.this);
-        busLineSearch.searchBusLineAsyn();// 异步查询公交线路名称
-    }
-
-}
 
 
     /**
