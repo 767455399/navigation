@@ -2,8 +2,6 @@ package com.compile.navigation;
 
 import android.app.Application;
 import android.content.Context;
-import android.os.Looper;
-import android.util.Log;
 
 import com.iflytek.cloud.SpeechUtility;
 
@@ -21,13 +19,14 @@ public class BaseApplication extends Application {
         applicationContext = getApplicationContext();
         //科大讯飞初始化
         //  Setting.setShowLog(true); //设置日志开关（默认为true），设置成false时关闭语音云SDK日志打印
-        new android.os.Handler(Looper.getMainLooper()).post(new Runnable() {
-            @Override
-            public void run() {
-                SpeechUtility.createUtility(applicationContext, "appid=5ae41a92");//=号后面写自己应用的APPID
-                Log.d(TAG, "run: 初始化结束");
-            }
-        });
+        SpeechUtility.createUtility(BaseApplication.this, "appid=5ae41a92");
+//        new android.os.Handler(Looper.getMainLooper()).post(new Runnable() {
+//            @Override
+//            public void run() {
+//                SpeechUtility.createUtility(applicationContext, "appid=5ae41a92");//=号后面写自己应用的APPID
+//                Log.d(TAG, "run: 初始化结束");
+//            }
+//        });
 
     }
 

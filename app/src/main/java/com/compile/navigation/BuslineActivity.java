@@ -1,11 +1,20 @@
 package com.compile.navigation;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -52,12 +61,15 @@ import java.util.List;
 public class BuslineActivity extends Activity implements OnMarkerClickListener,
         InfoWindowAdapter, OnItemSelectedListener, OnBusLineSearchListener,
         OnClickListener, AMapLocationListener {
+    public static final int ACCESS_COARSE_LOCATION=0;
+    private static final String PACKAGE_URL_SCHEME = "package:";
     private static final double EARTH_RADIUS = 6378137.0;
     private static final String TAG = "BuslineActivity";
     private EditText distanceEditText;
     private float zuixiaojuli = 10000;
     private int zuixiao = 0;
     private double juli;
+    private TTSUtils ttsUtils;
     private AMap aMap;
     private MapView mapView;
     private ProgressDialog progDialog = null;// 进度框
@@ -82,6 +94,10 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
     protected void onCreate(Bundle bundle) {
         super.onCreate(bundle);
         setContentView(R.layout.busline_activity);
+        ttsUtils=TTSUtils.getInstance();
+        SpeechUtility.createUtility(BuslineActivity.this, "appid=5ad5ee1e");//=号后面写自己应用的APPID
+        ttsUtils.speak("开始公交站播报");
+        requestPermissions();
         /*
          * 设置离线地图存储目录，在下载离线地图或初始化地图设置;
          * 使用过程中可自行设置, 若自行设置了离线地图存储的路径，
@@ -327,11 +343,11 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
 //                        if (getDistance(currentLongitude, currentLatitude, busStationLongitude, busStationLatitude) < juli) {
 //                            Log.d(TAG, "onLocationChanged: 到了" + mBusStations.get(i).getBusStationName());
 //                            if (mBusStations.get(i).getBusStationName() != busStationName) {
-//                                Toast.makeText(BuslineActivity.this, mBusStations.get(i).getBusStationName(), Toast.LENGTH_SHORT).show();
-//                                busStationName = mBusStations.get(i).getBusStationName();
-//                                if (!TextUtils.isEmpty(busStationName)) {
-//                                    SpeechUtility.createUtility(BuslineActivity.this, "appid=5ad5ee1e");//=号后面写自己应用的APPID
-//                                    TTSUtils.getInstance().speak(busStationName + "站到了");
+//                                if (!TextUtils.isEmpty(busStationName)&&busStationName!=mBusStations.get(zuixiao).getBusStationName()) {
+//                            //        SpeechUtility.createUtility(BuslineActivity.this, "appid=5ae41a92");//=号后面写自己应用的APPID
+//                                    ttsUtils.speak(busStationName + "到了");
+//                                    Toast.makeText(BuslineActivity.this, mBusStations.get(zuixiao).getBusStationName(), Toast.LENGTH_SHORT).show();
+//                                    busStationName = mBusStations.get(zuixiao).getBusStationName();
 //                                }
 //                            }
 //                        }
@@ -356,12 +372,44 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
 
     }
 
+    private void requestPermissions() {
+        if(ContextCompat.checkSelfPermission(BuslineActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION)!= PackageManager.PERMISSION_GRANTED){
+            /**
+             * 如果权限未被禁止弹框则继续申请，并告知用途以及不允许权限的弊端。
+             */
+            if(!ActivityCompat.shouldShowRequestPermissionRationale(BuslineActivity.this,Manifest.permission.ACCESS_COARSE_LOCATION)){
+                ActivityCompat.requestPermissions(BuslineActivity.this,new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},ACCESS_COARSE_LOCATION);
+            }else{
+                /**
+                 * 完全禁止无法再弹权限申请框，这是提示用户去设置里开启权限。
+                 */
+                AlertDialog dialog=new AlertDialog.Builder(BuslineActivity.this)
+                        .setTitle("提示")
+                        .setMessage("去设置里开启定位权限")
+                        .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                Intent intent=new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                                intent.setData(Uri.parse(PACKAGE_URL_SCHEME+getPackageName()));
+                                startActivity(intent);
+                            }
+                        })
+                        .setNegativeButton("取消",null)
+                        .create();
+                dialog.show();
+            }
+        }
+    }
+
+    /**
+     * 语音播报
+     */
     private void bobao() {
         if (zuixiaojuli < juli) {
             if (!TextUtils.isEmpty(mBusStations.get(zuixiao).getBusStationName()) && busStationName != mBusStations.get(zuixiao).getBusStationName()) {
                 for (int m = 0; m < 2; m++) {
-                    SpeechUtility.createUtility(BuslineActivity.this, "appid=5ad5ee1e");//=号后面写自己应用的APPID
-                    TTSUtils.getInstance().speak(busStationName + "站到了");
+                    SpeechUtility.createUtility(BuslineActivity.this, "appid=5ae41a92");//=号后面写自己应用的APPID
+                    ttsUtils.getInstance().speak(mBusStations.get(zuixiao).getBusStationName() + "到了");
                     Toast.makeText(BuslineActivity.this, mBusStations.get(zuixiao).getBusStationName(), Toast.LENGTH_SHORT).show();
                     Log.d(TAG, "onLocationChanged: 到了" + mBusStations.get(zuixiao).getBusStationName());
                 }
