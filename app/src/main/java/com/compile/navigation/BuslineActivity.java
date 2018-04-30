@@ -148,6 +148,8 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
     @Override
     protected void onResume() {
         super.onResume();
+        SpeechUtility.createUtility(BuslineActivity.this, "appid=5ad5ee1e");//=号后面写自己应用的APPID
+        TTSUtils.getInstance().speak(busStationName + "开始公交站点播报");
         mapView.onResume();
         aMapLocationClient.startLocation();
     }
@@ -324,21 +326,23 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
                         double busStationLatitude = mBusStations.get(i).getLatLonPoint().getLatitude();
                         double busStationLongitude = mBusStations.get(i).getLatLonPoint().getLongitude();
                         double bb = getDistance(currentLongitude, currentLatitude, busStationLongitude, busStationLatitude);
-//                        if (getDistance(currentLongitude, currentLatitude, busStationLongitude, busStationLatitude) < juli) {
-//                            Log.d(TAG, "onLocationChanged: 到了" + mBusStations.get(i).getBusStationName());
-//                            if (mBusStations.get(i).getBusStationName() != busStationName) {
-//                                Toast.makeText(BuslineActivity.this, mBusStations.get(i).getBusStationName(), Toast.LENGTH_SHORT).show();
-//                                busStationName = mBusStations.get(i).getBusStationName();
-//                                if (!TextUtils.isEmpty(busStationName)) {
-//                                    SpeechUtility.createUtility(BuslineActivity.this, "appid=5ad5ee1e");//=号后面写自己应用的APPID
-//                                    TTSUtils.getInstance().speak(busStationName + "站到了");
-//                                }
-//                            }
-//                        }
+//                        bobao();
+                        if (getDistance(currentLongitude, currentLatitude, busStationLongitude, busStationLatitude) < juli) {
+                            Log.d(TAG, "onLocationChanged: 到了" + mBusStations.get(i).getBusStationName());
+                            if (mBusStations.get(zuixiao).getBusStationName() != busStationName) {
+                                Toast.makeText(BuslineActivity.this, mBusStations.get(i).getBusStationName(), Toast.LENGTH_SHORT).show();
+                                busStationName = mBusStations.get(zuixiao).getBusStationName();
+                                if (!TextUtils.isEmpty(busStationName)) {
+                                    SpeechUtility.createUtility(BuslineActivity.this, "appid=5ad5ee1e");//=号后面写自己应用的APPID
+                                    TTSUtils.getInstance().speak(busStationName + "站到了");
+                                    TTSUtils.getInstance().speak(busStationName + "站到了");
+                                    busStationName=mBusStations.get(zuixiao).getBusStationName();
+                                }
+                            }
+                        }
 
 
                     }
-                    bobao();
 
 
                 }
