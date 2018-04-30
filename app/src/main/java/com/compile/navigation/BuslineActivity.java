@@ -1,11 +1,20 @@
 package com.compile.navigation;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -52,6 +61,8 @@ import java.util.List;
 public class BuslineActivity extends Activity implements OnMarkerClickListener,
         InfoWindowAdapter, OnItemSelectedListener, OnBusLineSearchListener,
         OnClickListener, AMapLocationListener {
+    public static final int ACCESS_COARSE_LOCATION=0;
+    private static final String PACKAGE_URL_SCHEME = "package:";
     private static final double EARTH_RADIUS = 6378137.0;
     private static final String TAG = "BuslineActivity";
     private EditText distanceEditText;
@@ -69,7 +80,6 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
     private BusLineResult busLineResult;// 公交线路搜索返回的结果
     private List<BusLineItem> lineItems = null;// 公交线路搜索返回的busline
     private BusLineQuery busLineQuery;// 公交线路查询的查询类
-
     private BusLineSearch busLineSearch;// 公交线路列表查询
     private AMapLocationClient aMapLocationClient;
     private AMapLocationClientOption aMapLocationClientOption;
@@ -91,6 +101,7 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
 //        MapsInitializer.sdcardDir =OffLineMapUtils.getSdCacheDir(this);
         mapView = (MapView) findViewById(R.id.map);
         mapView.onCreate(bundle);// 此方法必须重写
+        requestPermissions();
         init();
     }
 
@@ -107,12 +118,12 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
         aMapLocationClientOption = new AMapLocationClientOption();
         aMapLocationClient.setLocationListener(this);
         aMapLocationClientOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Battery_Saving);
-        aMapLocationClientOption.setInterval(2000);
+//        aMapLocationClientOption.setInterval(2000);
         myLocationStyle = new MyLocationStyle();
         //初始化定位蓝点样式类
         myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE);
         //连续定位、且将视角移动到地图中心点，定位点依照设备方向旋转，并且会跟随设备移动。（1秒1次定位）如果不设置myLocationType，默认也会执行此种模式。
-        myLocationStyle.interval(2000); //设置连续定位模式下的定位间隔，只在连续定位模式下生效，单次定位模式下不会生效。单位为毫秒。
+        myLocationStyle.interval(10000); //设置连续定位模式下的定位间隔，只在连续定位模式下生效，单次定位模式下不会生效。单位为毫秒。
         myLocationStyle.showMyLocation(true);
         aMap.setMyLocationStyle(myLocationStyle);//设置定位蓝点的Style
         aMap.getUiSettings().setMyLocationButtonEnabled(true);//设置默认定位按钮是否显示，非必需设置。
@@ -318,28 +329,28 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
                     for (int i = 0; i < mBusStations.size(); i++) {
                         LatLng endLatLng = new LatLng(mBusStations.get(i).getLatLonPoint().getLatitude(), mBusStations.get(i).getLatLonPoint().getLongitude());
                         float aa = AMapUtils.calculateLineDistance(startLatLng, endLatLng);
-                        if (aa < zuixiaojuli) {
-                            zuixiaojuli = aa;
-                            zuixiao = i;
-                        }
-
+//                        if (aa < zuixiaojuli) {
+//                            zuixiaojuli = aa;
+//                            zuixiao = i;
+//                        }
                         double busStationLatitude = mBusStations.get(i).getLatLonPoint().getLatitude();
                         double busStationLongitude = mBusStations.get(i).getLatLonPoint().getLongitude();
                         double bb = getDistance(currentLongitude, currentLatitude, busStationLongitude, busStationLatitude);
 //                        bobao();
                         if (getDistance(currentLongitude, currentLatitude, busStationLongitude, busStationLatitude) < juli) {
                             Log.d(TAG, "onLocationChanged: 到了" + mBusStations.get(i).getBusStationName());
-                            if (mBusStations.get(zuixiao).getBusStationName() != busStationName) {
-                                Toast.makeText(BuslineActivity.this, mBusStations.get(i).getBusStationName(), Toast.LENGTH_SHORT).show();
-                                busStationName = mBusStations.get(zuixiao).getBusStationName();
+                            if (mBusStations.get(i).getBusStationName() != busStationName) {
+                                busStationName = mBusStations.get(i).getBusStationName();
                                 if (!TextUtils.isEmpty(busStationName)) {
                                     SpeechUtility.createUtility(BuslineActivity.this, "appid=5ad5ee1e");//=号后面写自己应用的APPID
                                     TTSUtils.getInstance().speak(busStationName + "站到了");
-                                    TTSUtils.getInstance().speak(busStationName + "站到了");
-                                    busStationName=mBusStations.get(zuixiao).getBusStationName();
+                                    busStationName=mBusStations.get(i).getBusStationName();
+                                    Toast.makeText(BuslineActivity.this, mBusStations.get(i).getBusStationName(), Toast.LENGTH_SHORT).show();
+//                                    startActivity(new Intent(BuslineActivity.this,SpeakActivity.class));
                                 }
                             }
                         }
+                        bobao();
 
 
                     }
@@ -361,10 +372,9 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
     }
 
     private void bobao() {
-        if (zuixiaojuli < juli) {
+        if (zuixiaojuli <= juli) {
             if (!TextUtils.isEmpty(mBusStations.get(zuixiao).getBusStationName()) && busStationName != mBusStations.get(zuixiao).getBusStationName()) {
                 for (int m = 0; m < 2; m++) {
-                    SpeechUtility.createUtility(BuslineActivity.this, "appid=5ad5ee1e");//=号后面写自己应用的APPID
                     TTSUtils.getInstance().speak(busStationName + "站到了");
                     Toast.makeText(BuslineActivity.this, mBusStations.get(zuixiao).getBusStationName(), Toast.LENGTH_SHORT).show();
                     Log.d(TAG, "onLocationChanged: 到了" + mBusStations.get(zuixiao).getBusStationName());
@@ -526,5 +536,34 @@ public class BuslineActivity extends Activity implements OnMarkerClickListener,
     @Override
     public void onClick(View v) {
         searchLine();
+    }
+
+    private void requestPermissions() {
+        if(ContextCompat.checkSelfPermission(BuslineActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION)!= PackageManager.PERMISSION_GRANTED){
+            /**
+             * 如果权限未被禁止弹框则继续申请，并告知用途以及不允许权限的弊端。
+             */
+            if(!ActivityCompat.shouldShowRequestPermissionRationale(BuslineActivity.this,Manifest.permission.ACCESS_COARSE_LOCATION)){
+                ActivityCompat.requestPermissions(BuslineActivity.this,new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},ACCESS_COARSE_LOCATION);
+            }else{
+                /**
+                 * 完全禁止无法再弹权限申请框，这是提示用户去设置里开启权限。
+                 */
+                AlertDialog dialog=new AlertDialog.Builder(BuslineActivity.this)
+                        .setTitle("提示")
+                        .setMessage("去设置里开启定位权限，否则无法获取位置")
+                        .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                Intent intent=new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                                intent.setData(Uri.parse(PACKAGE_URL_SCHEME+getPackageName()));
+                                startActivity(intent);
+                            }
+                        })
+                        .setNegativeButton("取消",null)
+                        .create();
+                dialog.show();
+            }
+        }
     }
 }

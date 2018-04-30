@@ -41,6 +41,7 @@
         <activity android:name=".MapActivity" />
         <activity android:name=".LocationActivity"></activity>
         <activity android:name=".BusRouteDetailActivity"/>
+        <activity android:name=".SpeakActivity"/>
     </application>
 
 </manifest>
